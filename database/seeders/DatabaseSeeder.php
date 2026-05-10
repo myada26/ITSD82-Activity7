@@ -78,10 +78,11 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $orgStudents = [
-            ['student_number' => '2023-002', 'first_name' => 'Chair', 'last_name' => 'Person'],
-            ['student_number' => '2023-003', 'first_name' => 'Tess', 'last_name' => 'Treasurer'],
-            ['student_number' => '2023-004', 'first_name' => 'Cole', 'last_name' => 'Collector'],
-            ['student_number' => '2023-005', 'first_name' => 'Audra', 'last_name' => 'Auditor'],
+            ['student_number' => '2023-002', 'first_name' => 'Chair',  'last_name' => 'Person'],
+            ['student_number' => '2023-003', 'first_name' => 'Tess',   'last_name' => 'Treasurer'],
+            ['student_number' => '2023-004', 'first_name' => 'Cole',   'last_name' => 'Collector'],
+            ['student_number' => '2023-005', 'first_name' => 'Audra',  'last_name' => 'Auditor'],
+            ['student_number' => '2023-006', 'first_name' => 'Sarah',  'last_name' => 'Secretary'],
         ];
 
         $orgStudentIds = [];
@@ -172,6 +173,16 @@ class DatabaseSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            'SECRETARY' => [
+                'student_id' => $orgStudentIds['2023-006'],
+                'organization_id' => $coeOrgId,
+                'username' => '2023-006-COE',
+                'password_hash' => Hash::make('password'),
+                'role' => 'SECRETARY',
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ];
 
         $userIds = [];
@@ -196,11 +207,12 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $rolePermissions = [
-            'SSC_ADMIN' => [],
-            'CHAIRPERSON' => ['students:view', 'students:enroll', 'users:manage', 'void:approve', 'audit:view'],
-            'TREASURER' => ['students:view', 'transactions:view', 'pos:create', 'void:request', 'remit:view', 'remit:create'],
-            'COLLECTOR' => ['students:view', 'pos:create', 'void:request'],
-            'AUDITOR' => ['transactions:view', 'remit:view', 'remit:verify', 'remit:accept', 'void:review', 'audit:view'],
+            'SSC_ADMIN'  => [],
+            'CHAIRPERSON' => ['students:view', 'students:enroll', 'users:manage', 'void:approve', 'audit:view', 'attendance:view', 'event:create', 'event:approve'],
+            'TREASURER'  => ['students:view', 'transactions:view', 'pos:create', 'void:request', 'remit:view', 'remit:create'],
+            'COLLECTOR'  => ['students:view', 'pos:create', 'void:request'],
+            'AUDITOR'    => ['transactions:view', 'remit:view', 'remit:verify', 'remit:accept', 'void:review', 'audit:view', 'attendance:view', 'event:approve'],
+            'SECRETARY'  => ['attendance:record', 'attendance:view'],
         ];
 
         $permissionIds = DB::table('permissions')->pluck('id', 'slug');

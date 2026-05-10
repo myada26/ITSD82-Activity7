@@ -65,8 +65,8 @@ class StudentController extends Controller
                 'student_number' => $data['student_number'],
                 'first_name'     => $data['first_name'],
                 'last_name'      => $data['last_name'],
-                'middle_name'    => $data['middle_name'],
-                'created_source' => 'MANUAL_ORG',
+                'middle_name'    => $data['middle_name'] ?? null,
+                'created_source' => 'MANUAL',
             ]);
 
             \App\Models\StudentEnrollment::create([

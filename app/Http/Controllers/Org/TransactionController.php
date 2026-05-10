@@ -4,9 +4,13 @@ namespace App\Http\Controllers\Org;
 
 use App\Http\Controllers\Controller;
 use App\Models\AcademicYear;
+use App\Models\AuditLog;
 use App\Models\FeeProfile;
 use App\Models\Student;
+use App\Models\StudentFine;
 use App\Models\Transaction;
+use App\Services\FineService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -43,7 +47,17 @@ class TransactionController extends Controller
             $searchResults = $this->studentSearch($searchQuery);
         }
 
-        return view('org.transactions.create', compact('feeProfiles', 'searchResults', 'searchQuery'));
+        // Load outstanding fines for the found student (for FINE payment flow)
+        $unpaidFines = collect();
+        if ($searchResults && $searchResults->count() === 1) {
+            $unpaidFines = StudentFine::where('student_id', $searchResults->first()->id)
+                ->where('organization_id', auth()->user()->organization_id)
+                ->where('status', 'UNPAID')
+                ->with('event:id,name,date')
+                ->get();
+        }
+
+        return view('org.transactions.create', compact('feeProfiles', 'searchResults', 'searchQuery', 'unpaidFines'));
     }
 
     public function search(Request $request)
@@ -84,7 +98,7 @@ class TransactionController extends Controller
                 'organization_id' => $orgId,
                 'academic_year_id' => $activeSemester->id,
                 'student_id' => $data['student_id'],
-                'processed_by_user_id' => auth()->id(),
+                'processed_by_user_id' => auth()->user()->id,
                 'amount_paid' => $feeProfile->amount,
                 'payment_method' => $data['payment_method'],
                 'reference_number' => $data['gcash_reference'] ?? null,
@@ -94,7 +108,87 @@ class TransactionController extends Controller
             ]);
         });
 
+        $transaction->loadMissing('student');
+
+        AuditLog::create([
+            'user_id'     => auth()->user()->id,
+            'action'      => 'TRANSACTION_CREATED',
+            'entity_type' => 'TRANSACTION',
+            'entity_id'   => $transaction->id,
+            'details'     => [
+                'or_number'      => $transaction->or_number,
+                'student_number' => $transaction->student->student_number,
+                'amount_paid'    => $transaction->amount_paid,
+                'payment_method' => $transaction->payment_method,
+            ],
+            'ip_address' => $request->ip(),
+            'timestamp'  => now(),
+        ]);
+
         return redirect()->route('org.transactions.show', $transaction)->with('success', 'Transaction recorded.');
+    }
+
+    public function storeFine(Request $request)
+    {
+        $data = $request->validate([
+            'student_id'      => 'required|exists:students,id',
+            'payment_method'  => 'required|in:CASH,GCASH',
+            'gcash_reference' => 'nullable|required_if:payment_method,GCASH|string|max:100',
+            'amount_paid'     => 'required|numeric|min:0.01',
+            'student_fine_id' => 'nullable|exists:student_fines,id',
+        ]);
+
+        $orgId          = auth()->user()->organization_id;
+        $activeSemester = AcademicYear::where('is_active', true)->firstOrFail();
+
+        $transaction = DB::transaction(function () use ($data, $orgId, $activeSemester) {
+            $sequence = \App\Models\OrSequence::lockForUpdate()->firstOrCreate(
+                ['organization_id' => $orgId],
+                ['last_or_number' => 0]
+            );
+            $sequence->increment('last_or_number');
+
+            return Transaction::create([
+                'or_number'            => sprintf('OR-%s-%05d', now()->format('Y'), $sequence->last_or_number),
+                'organization_id'      => $orgId,
+                'academic_year_id'     => $activeSemester->id,
+                'student_id'           => $data['student_id'],
+                'processed_by_user_id' => auth()->user()->id,
+                'amount_paid'          => $data['amount_paid'],
+                'payment_method'       => $data['payment_method'],
+                'reference_number'     => $data['gcash_reference'] ?? null,
+                'fee_profile_id'       => null,
+                'transaction_type'     => 'FINE',
+                'student_fine_id'      => $data['student_fine_id'] ?? null,
+                'is_void'              => false,
+            ]);
+        });
+
+        // Sync fine status if a specific fine was linked
+        if ($data['student_fine_id'] ?? null) {
+            app(FineService::class)->markPaid($transaction);
+        }
+
+        $transaction->loadMissing('student');
+
+        AuditLog::create([
+            'user_id'     => auth()->user()->id,
+            'action'      => 'TRANSACTION_CREATED',
+            'entity_type' => 'TRANSACTION',
+            'entity_id'   => $transaction->id,
+            'details'     => [
+                'or_number'        => $transaction->or_number,
+                'student_number'   => $transaction->student->student_number,
+                'amount_paid'      => $transaction->amount_paid,
+                'payment_method'   => $transaction->payment_method,
+                'transaction_type' => 'FINE',
+                'student_fine_id'  => $data['student_fine_id'] ?? null,
+            ],
+            'ip_address' => $request->ip(),
+            'timestamp'  => now(),
+        ]);
+
+        return redirect()->route('org.transactions.show', $transaction)->with('success', 'Fine payment recorded.');
     }
 
     public function show(Transaction $transaction)
@@ -103,9 +197,23 @@ class TransactionController extends Controller
             abort(403);
         }
 
-        $transaction->load(['student', 'organization', 'academicYear', 'processedBy', 'feeProfile', 'voidRequest']);
+        $transaction->load(['student', 'organization', 'academicYear', 'processedBy', 'feeProfile', 'voidRequest', 'studentFine.event']);
 
         return view('org.transactions.show', compact('transaction'));
+    }
+
+    public function receipt(Transaction $transaction)
+    {
+        if ($transaction->organization_id !== auth()->user()->organization_id) {
+            abort(403);
+        }
+
+        $transaction->load(['student', 'feeProfile', 'processedBy', 'organization', 'academicYear', 'voidRequest']);
+
+        $pdf = Pdf::loadView('pdf.receipt', compact('transaction'))
+            ->setPaper([0, 0, 396, 612]); // half-letter portrait
+
+        return $pdf->stream('OR-' . $transaction->or_number . '.pdf');
     }
 
     private function studentSearch(string $search)

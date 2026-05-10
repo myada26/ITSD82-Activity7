@@ -126,7 +126,17 @@ class User extends Authenticatable
 
     public function canViewOrgStudents(): bool
     {
-        return $this->hasRole(['CHAIRPERSON', 'TREASURER', 'COLLECTOR', 'AUDITOR']);
+        return $this->hasRole(['CHAIRPERSON', 'TREASURER', 'COLLECTOR', 'AUDITOR', 'SECRETARY']);
+    }
+
+    public function canRecordAttendance(): bool
+    {
+        return $this->hasRole('SECRETARY');
+    }
+
+    public function canManageEvents(): bool
+    {
+        return $this->hasRole(['CHAIRPERSON', 'AUDITOR', 'SECRETARY']);
     }
 
     public function canEnrollStudents(): bool

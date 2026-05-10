@@ -1,7 +1,7 @@
-<aside class="w-[260px] min-h-screen bg-[#0d4a1e] flex flex-col shrink-0 shadow-xl z-20">
+<aside class="w-[260px] min-h-screen bg-green-900 flex flex-col shrink-0 shadow-xl z-20">
     <div class="px-6 py-5 flex items-center gap-3.5 border-b border-white/10 shrink-0">
-        <div class="w-9 h-9 bg-[#d4a42a] rounded-xl flex items-center justify-center shrink-0 shadow-inner">
-            <svg class="w-5 h-5 text-[#0d4a1e]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <div class="w-9 h-9 bg-gold-500 rounded-lg flex items-center justify-center shrink-0 shadow-inner">
+            <svg class="w-5 h-5 text-green-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                 <path d="m12 3 9 5-9 5-9-5 9-5Z"></path>
                 <path d="m3 13 9 5 9-5"></path>
                 <path d="m3 18 9 5 9-5"></path>
@@ -39,11 +39,11 @@
             @php $items = array_values(array_filter($items, $allowed)); @endphp
             @continue(empty($items))
             <div class="mb-4">
-                <div class="text-[10px] font-bold tracking-widest uppercase text-[#8aa89a] px-3 mb-2">{{ $section }}</div>
+                <div class="text-[10px] font-bold tracking-widest uppercase text-green-300 px-3 mb-2">{{ $section }}</div>
                 <div class="space-y-0.5">
                     @foreach($items as $item)
                         @php $isActive = request()->routeIs($item['active']); @endphp
-                        <a href="{{ route($item['route']) }}" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13.5px] font-medium transition-all {{ $isActive ? 'bg-[#1a7a41] text-white shadow-sm' : 'text-[#b7dfc7] hover:bg-white/5 hover:text-white' }}">
+                        <a href="{{ route($item['route']) }}" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-medium transition-all {{ $isActive ? 'bg-green-600 text-white shadow-sm' : 'text-[#b7dfc7] hover:bg-white/5 hover:text-white' }}">
                             @include('partials.ui-icon', ['name' => $item['icon'], 'class' => 'w-4 h-4 shrink-0 '.($isActive ? 'opacity-100' : 'opacity-70')])
                             <span class="truncate">{{ $item['label'] }}</span>
                         </a>
@@ -54,8 +54,8 @@
     </nav>
 
     <div class="relative mt-auto p-4 border-t border-white/10 shrink-0 bg-[#0a3816]/30">
-        <div class="flex items-center gap-3 w-full p-2 -mx-2 rounded-xl text-left">
-            <div class="w-9 h-9 bg-[#1a7a41] rounded-full flex items-center justify-center text-[13px] font-bold text-white shrink-0">
+        <div class="flex items-center gap-3 w-full p-2 -mx-2 rounded-lg text-left">
+            <div class="w-9 h-9 bg-green-600 rounded-full flex items-center justify-center text-[13px] font-bold text-white shrink-0">
                 {{ strtoupper(substr(auth()->user()->username ?? 'SA', 0, 2)) }}
             </div>
             <div class="flex-1 min-w-0">

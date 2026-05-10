@@ -30,7 +30,7 @@ class UserController extends Controller
         $data = $request->validate([
             'username'   => 'required|string|max:100|unique:users,username',
             'password'   => 'required|string|min:8',
-            'role'       => 'required|in:CHAIRPERSON,TREASURER,COLLECTOR,AUDITOR',
+            'role'       => 'required|in:CHAIRPERSON,TREASURER,COLLECTOR,AUDITOR,SECRETARY',
         ]);
 
         $data['password_hash'] = Hash::make($data['password']);
@@ -63,7 +63,7 @@ class UserController extends Controller
         $data = $request->validate([
             'username'   => 'required|string|max:100|unique:users,username,'.$user->id,
             'password'   => 'nullable|string|min:8',
-            'role'       => 'required|in:CHAIRPERSON,TREASURER,COLLECTOR,AUDITOR',
+            'role'       => 'required|in:CHAIRPERSON,TREASURER,COLLECTOR,AUDITOR,SECRETARY',
             'is_active'  => 'nullable|boolean',
         ]);
 
@@ -85,7 +85,7 @@ class UserController extends Controller
             abort(403);
         }
 
-        if (auth()->id() === $user->id) {
+        if (auth()->user()->id === $user->id) {
             return redirect()->route('org.users.index')
                 ->with('error', 'You cannot remove your own account while signed in.');
         }
@@ -103,10 +103,11 @@ class UserController extends Controller
     private function syncRolePermissions(User $user): void
     {
         $rolePermissions = [
-            'CHAIRPERSON' => ['students:view', 'students:enroll', 'users:manage', 'void:approve', 'audit:view'],
-            'TREASURER' => ['students:view', 'transactions:view', 'pos:create', 'void:request', 'remit:view', 'remit:create'],
-            'COLLECTOR' => ['students:view', 'pos:create', 'void:request'],
-            'AUDITOR' => ['transactions:view', 'remit:view', 'remit:verify', 'remit:accept', 'void:review', 'audit:view'],
+            'CHAIRPERSON' => ['students:view', 'students:enroll', 'users:manage', 'void:approve', 'audit:view', 'attendance:view', 'event:create', 'event:approve'],
+            'TREASURER'   => ['students:view', 'transactions:view', 'pos:create', 'void:request', 'remit:view', 'remit:create'],
+            'COLLECTOR'   => ['students:view', 'pos:create', 'void:request'],
+            'AUDITOR'     => ['transactions:view', 'remit:view', 'remit:verify', 'remit:accept', 'void:review', 'audit:view', 'attendance:view', 'event:approve'],
+            'SECRETARY'   => ['attendance:record', 'attendance:view'],
         ];
 
         $permissionIds = DB::table('permissions')

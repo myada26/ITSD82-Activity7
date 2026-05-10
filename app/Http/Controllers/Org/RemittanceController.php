@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Org;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use Illuminate\Http\Request;
 
 class RemittanceController extends Controller
@@ -55,13 +56,27 @@ class RemittanceController extends Controller
             'organization_id'  => $orgId,
             'academic_year_id' => $activeSemester->id,
             'total_amount'      => $transactions->sum('amount_paid'),
-            'created_by_user_id' => auth()->id(),
+            'created_by_user_id' => auth()->user()->id,
             'status'           => 'PENDING',
         ]);
 
         foreach ($transactions as $tx) {
             $tx->update(['remittance_id' => $remittance->id]);
         }
+
+        AuditLog::create([
+            'user_id'     => auth()->user()->id,
+            'action'      => 'REMITTANCE_CREATED',
+            'entity_type' => 'REMITTANCE',
+            'entity_id'   => $remittance->id,
+            'details'     => [
+                'control_number'  => $remittance->control_number,
+                'total_amount'    => $remittance->total_amount,
+                'tx_count'        => $transactions->count(),
+            ],
+            'ip_address' => $request->ip(),
+            'timestamp'  => now(),
+        ]);
 
         return redirect()->route('org.remittances.index')->with('success', 'Remittance batch created.');
     }
@@ -76,7 +91,7 @@ class RemittanceController extends Controller
         return view('org.remittances.show', compact('remittance'));
     }
 
-    public function verify(\App\Models\Remittance $remittance)
+    public function verify(Request $request, \App\Models\Remittance $remittance)
     {
         if ($remittance->organization_id !== auth()->user()->organization_id) {
             abort(403);
@@ -88,13 +103,24 @@ class RemittanceController extends Controller
 
         $remittance->update([
             'status' => 'VERIFIED',
-            'verified_by_user_id' => auth()->id(),
+            'verified_by_user_id' => auth()->user()->id,
             'verified_at' => now(),
         ]);
+
+        AuditLog::create([
+            'user_id'     => auth()->user()->id,
+            'action'      => 'REMITTANCE_VERIFIED',
+            'entity_type' => 'REMITTANCE',
+            'entity_id'   => $remittance->id,
+            'details'     => ['control_number' => $remittance->control_number],
+            'ip_address'  => $request->ip(),
+            'timestamp'   => now(),
+        ]);
+
         return back()->with('success', 'Remittance batch verified.');
     }
 
-    public function accept(\App\Models\Remittance $remittance)
+    public function accept(Request $request, \App\Models\Remittance $remittance)
     {
         if ($remittance->organization_id !== auth()->user()->organization_id) {
             abort(403);
@@ -106,9 +132,20 @@ class RemittanceController extends Controller
 
         $remittance->update([
             'status' => 'ACCEPTED',
-            'accepted_by_user_id' => auth()->id(),
+            'accepted_by_user_id' => auth()->user()->id,
             'accepted_at' => now(),
         ]);
+
+        AuditLog::create([
+            'user_id'     => auth()->user()->id,
+            'action'      => 'REMITTANCE_ACCEPTED',
+            'entity_type' => 'REMITTANCE',
+            'entity_id'   => $remittance->id,
+            'details'     => ['control_number' => $remittance->control_number],
+            'ip_address'  => $request->ip(),
+            'timestamp'   => now(),
+        ]);
+
         return back()->with('success', 'Remittance batch accepted.');
     }
 }

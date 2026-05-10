@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Org;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Transaction;
 use App\Models\VoidRequest;
+use App\Services\FineService;
 use Illuminate\Http\Request;
 
 class VoidRequestController extends Controller
@@ -36,20 +38,35 @@ class VoidRequestController extends Controller
             abort(403);
         }
 
-        VoidRequest::firstOrCreate(
+        $voidRequest = VoidRequest::firstOrCreate(
             ['transaction_id' => $transaction->id],
             [
-                'requested_by_user_id' => auth()->id(),
+                'requested_by_user_id' => auth()->user()->id,
                 'reason' => $data['reason'],
                 'status' => 'PENDING',
                 'created_at' => now(),
             ]
         );
 
+        if ($voidRequest->wasRecentlyCreated) {
+            AuditLog::create([
+                'user_id'     => auth()->user()->id,
+                'action'      => 'VOID_REQUESTED',
+                'entity_type' => 'VOID_REQUEST',
+                'entity_id'   => $voidRequest->id,
+                'details'     => [
+                    'or_number' => $transaction->or_number,
+                    'reason'    => $data['reason'],
+                ],
+                'ip_address' => $request->ip(),
+                'timestamp'  => now(),
+            ]);
+        }
+
         return redirect()->route('org.void-requests.index')->with('success', 'Void request submitted for chairperson review.');
     }
 
-    public function approve(VoidRequest $voidRequest)
+    public function approve(Request $request, VoidRequest $voidRequest)
     {
         $this->authorizeOrgVoid($voidRequest);
 
@@ -57,17 +74,37 @@ class VoidRequestController extends Controller
             return back()->with('error', 'Only pending void requests can be approved.');
         }
 
+        $voidRequest->loadMissing('transaction.studentFine');
         $voidRequest->transaction->update(['is_void' => true]);
+
+        // Revert fine status to UNPAID when its payment transaction is voided (FR-0029)
+        if ($voidRequest->transaction->isFine() && $voidRequest->transaction->studentFine) {
+            app(FineService::class)->revertPaid($voidRequest->transaction);
+        }
+
         $voidRequest->update([
-            'approved_by_user_id' => auth()->id(),
+            'approved_by_user_id' => auth()->user()->id,
             'status' => 'APPROVED',
             'resolved_at' => now(),
+        ]);
+
+        AuditLog::create([
+            'user_id'     => auth()->user()->id,
+            'action'      => 'VOID_APPROVED',
+            'entity_type' => 'VOID_REQUEST',
+            'entity_id'   => $voidRequest->id,
+            'details'     => [
+                'or_number'      => $voidRequest->transaction->or_number,
+                'transaction_id' => $voidRequest->transaction_id,
+            ],
+            'ip_address' => $request->ip(),
+            'timestamp'  => now(),
         ]);
 
         return back()->with('success', 'Void request approved.');
     }
 
-    public function reject(VoidRequest $voidRequest)
+    public function reject(Request $request, VoidRequest $voidRequest)
     {
         $this->authorizeOrgVoid($voidRequest);
 
@@ -75,10 +112,24 @@ class VoidRequestController extends Controller
             return back()->with('error', 'Only pending void requests can be rejected.');
         }
 
+        $voidRequest->loadMissing('transaction');
         $voidRequest->update([
-            'approved_by_user_id' => auth()->id(),
+            'approved_by_user_id' => auth()->user()->id,
             'status' => 'REJECTED',
             'resolved_at' => now(),
+        ]);
+
+        AuditLog::create([
+            'user_id'     => auth()->user()->id,
+            'action'      => 'VOID_REJECTED',
+            'entity_type' => 'VOID_REQUEST',
+            'entity_id'   => $voidRequest->id,
+            'details'     => [
+                'or_number'      => $voidRequest->transaction->or_number,
+                'transaction_id' => $voidRequest->transaction_id,
+            ],
+            'ip_address' => $request->ip(),
+            'timestamp'  => now(),
         ]);
 
         return back()->with('success', 'Void request rejected.');

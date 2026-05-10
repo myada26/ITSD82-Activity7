@@ -61,4 +61,14 @@ class Organization extends Model
     {
         return $this->hasOne(OrSequence::class);
     }
+
+    public function events(): HasMany
+    {
+        return $this->hasMany(Event::class);
+    }
+
+    public function studentFines(): HasMany
+    {
+        return $this->hasMany(StudentFine::class);
+    }
 }

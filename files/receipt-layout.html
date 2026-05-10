@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Official Receipt</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .receipt-container {
+            background: white;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border: 2px solid #333;
+        }
+
+        /* Header Section */
+        .header {
+            text-align: center;
+            padding: 20px 15px 15px;
+            border-bottom: 2px dashed #666;
+        }
+
+        .logo {
+            width: 60px;
+            height: 60px;
+            background: rgb(0, 73, 30);
+            border-radius: 50%;
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 24px;
+        }
+
+        .org-name {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+
+        .college-name {
+            font-size: 11px;
+            color: #555;
+            margin-bottom: 1px;
+        }
+
+        .council-name {
+            font-size: 11px;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .receipt-title {
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-top: 8px;
+        }
+
+        /* Meta Info Section */
+        .meta-info {
+            padding: 12px 15px;
+            background: #f9f9f9;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .meta-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 11px;
+        }
+
+        .meta-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .meta-label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .meta-value {
+            color: #555;
+        }
+
+        /* Student Info Section */
+        .student-info {
+            padding: 15px;
+            border-bottom: 2px dashed #666;
+        }
+
+        .info-row {
+            display: flex;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-label {
+            font-weight: 600;
+            min-width: 100px;
+            color: #333;
+        }
+
+        .info-value {
+            color: #555;
+            flex: 1;
+        }
+
+        /* Transaction Details */
+        .transaction-details {
+            padding: 15px;
+            border-bottom: 2px dashed #666;
+        }
+
+        .transaction-type {
+            font-size: 13px;
+            font-weight: bold;
+            color: #1a5490;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .detail-label {
+            color: #555;
+        }
+
+        .detail-value {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .amount-breakdown {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #ddd;
+        }
+
+        .breakdown-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            font-size: 12px;
+        }
+
+        .breakdown-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .breakdown-label {
+            color: #555;
+        }
+
+        .breakdown-value {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .balance-due {
+            color: #d32f2f;
+            font-weight: bold;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 8px;
+        }
+
+        .status-full {
+            background: rgb(0, 73, 30);
+            color: white;
+        }
+
+        .status-partial {
+            background: #ff9800;
+            color: white;
+        }
+
+        /* Payment Section */
+        .payment-section {
+            padding: 15px;
+            background: #f9f9f9;
+            border-bottom: 2px solid #333;
+        }
+
+        .payment-method {
+            font-size: 11px;
+            color: #555;
+            margin-bottom: 8px;
+        }
+
+        .payment-method strong {
+            color: #333;
+        }
+
+        /* Total Section */
+        .total-section {
+            padding: 15px;
+            background: rgb(0, 73, 30);
+            color: white;
+            text-align: center;
+        }
+
+        .total-label {
+            font-size: 12px;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+
+        .total-amount {
+            font-size: 28px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .amount-words {
+            font-size: 11px;
+            font-style: italic;
+            opacity: 0.95;
+            letter-spacing: 0.5px;
+        }
+
+        /* Officer Section */
+        .officer-section {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .officer-label {
+            font-size: 10px;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .officer-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 2px;
+        }
+
+        .officer-role {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .signature-line {
+            border-top: 1px solid #333;
+            width: 200px;
+            margin: 0 auto;
+            padding-top: 5px;
+            text-align: center;
+            font-size: 9px;
+            color: #999;
+        }
+
+        /* Footer */
+        .footer {
+            padding: 12px 15px;
+            text-align: center;
+            font-size: 9px;
+            color: #999;
+            line-height: 1.4;
+        }
+
+        /* Print Styles */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .receipt-container {
+                max-width: 100%;
+                box-shadow: none;
+                border: 1px solid #333;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .receipt-container {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="receipt-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">CMU</div>
+            <div class="org-name">Central Mindanao University</div>
+            <div class="college-name">College of Engineering</div>
+            <div class="council-name">Engineering Student Council</div>
+            <div class="receipt-title">OFFICIAL RECEIPT</div>
+        </div>
+
+        <!-- Meta Information -->
+        <div class="meta-info">
+            <div class="meta-row">
+                <span class="meta-label">OR No.:</span>
+                <span class="meta-value">001234</span>
+            </div>
+            <div class="meta-row">
+                <span class="meta-label">Date:</span>
+                <span class="meta-value">December 25, 2025</span>
+            </div>
+            <div class="meta-row">
+                <span class="meta-label">Semester:</span>
+                <span class="meta-value">1st Semester 2025–2026</span>
+            </div>
+        </div>
+
+        <!-- Student Information -->
+        <div class="student-info">
+            <div class="info-row">
+                <span class="info-label">Student Name:</span>
+                <span class="info-value">Carlos Fidel G. Castro</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Student No.:</span>
+                <span class="info-value">2022301108</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Program:</span>
+                <span class="info-value">BS Information Technology</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Year Level:</span>
+                <span class="info-value">2nd Year</span>
+            </div>
+        </div>
+
+        <!-- Transaction Details -->
+        <div class="transaction-details">
+            <div class="transaction-type">Membership Fee</div>
+            <div class="detail-row">
+                <span class="detail-label">Fee Category:</span>
+                <span class="detail-value">Regular</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Description:</span>
+                <span class="detail-value">Engineering Council Membership Fee</span>
+            </div>
+            
+            <!-- Amount Breakdown -->
+            <div class="amount-breakdown">
+                <div class="breakdown-row">
+                    <span class="breakdown-label">Total Amount Due:</span>
+                    <span class="breakdown-value">₱150.00</span>
+                </div>
+                <div class="breakdown-row">
+                    <span class="breakdown-label">Amount Paid (This Receipt):</span>
+                    <span class="breakdown-value">₱150.00</span>
+                </div>
+                <div class="breakdown-row">
+                    <span class="breakdown-label">Balance Remaining:</span>
+                    <span class="breakdown-value balance-due">₱0.00</span>
+                </div>
+                <div style="text-align: center;">
+                    <span class="status-badge status-full">✓ FULLY PAID</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Section -->
+        <div class="payment-section">
+            <div class="payment-method">
+                <strong>Payment Method:</strong> GCash
+            </div>
+            <div class="payment-method">
+                <strong>Reference No.:</strong> 1234567890
+            </div>
+        </div>
+
+        <!-- Total Section -->
+        <div class="total-section">
+            <div class="total-label">TOTAL AMOUNT</div>
+            <div class="total-amount">₱1000.00</div>
+            <div class="amount-words">One Thousand Pesos Only</div>
+        </div>
+
+        <!-- Officer Section -->
+        <div class="officer-section">
+            <div class="officer-label">Received by:</div>
+            <div class="officer-name">Jao Beronio</div>
+            <div class="officer-role">Treasurer – CSCo</div>
+            <div class="signature-line">Signature</div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            This is a system-generated receipt.<br>
+            Void transactions are subject to approval.
+        </div>
+    </div>
+</body>
+</html>

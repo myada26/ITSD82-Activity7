@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Transaction extends Model
 {
@@ -19,6 +20,7 @@ class Transaction extends Model
         'reference_number',
         'fee_profile_id',
         'transaction_type',
+        'student_fine_id',
         'remittance_id',
         'is_void',
     ];
@@ -68,6 +70,12 @@ class Transaction extends Model
     public function voidRequest(): HasOne
     {
         return $this->hasOne(VoidRequest::class);
+    }
+
+    // Nullable — linked when POS officer selects a specific StudentFine to pay (FR-0029)
+    public function studentFine(): BelongsTo
+    {
+        return $this->belongsTo(StudentFine::class);
     }
 
     // ── Scopes ────────────────────────────────────────────────────────────

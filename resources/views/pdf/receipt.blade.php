@@ -86,7 +86,7 @@
     {{-- Amount box --}}
     <div class="amount-box">
         <div class="amount-label">Amount Paid</div>
-        <div class="amount-value">₱{{ number_format($transaction->amount, 2) }}</div>
+        <div class="amount-value">₱{{ number_format($transaction->amount_paid, 2) }}</div>
     </div>
 
     {{-- Payment info --}}

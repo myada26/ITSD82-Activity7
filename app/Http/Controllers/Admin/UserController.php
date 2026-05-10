@@ -74,7 +74,7 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
-        if (auth()->id() === $user->id) {
+        if (auth()->user()->id === $user->id) {
             return redirect()->route('admin.users.index')
                 ->with('error', 'You cannot delete your own account while signed in.');
         }

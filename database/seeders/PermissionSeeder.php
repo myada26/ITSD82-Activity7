@@ -23,7 +23,12 @@ class PermissionSeeder extends Seeder
             ['slug' => 'void:request',  'description' => 'Request a receipt void',               'module' => 'VOID'],
             ['slug' => 'void:approve',  'description' => 'Approve a void request',               'module' => 'VOID'],
             ['slug' => 'void:review',   'description' => 'Review void requests',                 'module' => 'VOID'],
-            ['slug' => 'reports:view',  'description' => 'Access financial reports',             'module' => 'REPORTS'],
+            ['slug' => 'reports:view',      'description' => 'Access financial reports',             'module' => 'REPORTS'],
+            // Module 8 — Attendance & Absence Fine Management (FR-0026–FR-0030)
+            ['slug' => 'attendance:record', 'description' => 'Record attendance for events',        'module' => 'ATTENDANCE'],
+            ['slug' => 'attendance:view',   'description' => 'View attendance sheets',              'module' => 'ATTENDANCE'],
+            ['slug' => 'event:create',      'description' => 'Create attendance events',            'module' => 'ATTENDANCE'],
+            ['slug' => 'event:approve',     'description' => 'Approve attendance submissions',      'module' => 'ATTENDANCE'],
         ];
 
         DB::table('permissions')->insertOrIgnore($permissions);

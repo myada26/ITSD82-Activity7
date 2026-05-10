@@ -45,6 +45,16 @@ class Student extends Model
         return $this->hasMany(User::class);
     }
 
+    public function attendanceRecords(): HasMany
+    {
+        return $this->hasMany(EventAttendance::class);
+    }
+
+    public function fines(): HasMany
+    {
+        return $this->hasMany(StudentFine::class);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────
 
     public function getFullNameAttribute(): string

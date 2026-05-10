@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\PublicAccountabilityController;
 use Illuminate\Support\Facades\Route;
 
 // ── Public ────────────────────────────────────────────────────────────────────
@@ -9,6 +10,11 @@ Route::get('/', fn() => redirect()->route('login'));
 Route::get('/login', [LoginController::class, 'showForm'])->name('login');
 Route::post('/login', [LoginController::class, 'authenticate']);
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+
+// Student accountability portal — unauthenticated, rate-limited (FR-0030)
+Route::get('/check-fees', [PublicAccountabilityController::class, 'index'])
+    ->middleware('throttle:20,1')
+    ->name('public.check-fees');
 
 // ── Admin (SSC) ───────────────────────────────────────────────────────────────
 Route::prefix('admin')
@@ -48,7 +54,8 @@ Route::prefix('org')
     ->middleware(['auth', 'session.timeout', 'org.scope'])
     ->name('org.')
     ->group(function () {
-        Route::get('/dashboard', [\App\Http\Controllers\Org\DashboardController::class, 'index'])->name('dashboard');
+        Route::get('/dashboard', [\App\Http\Controllers\Org\DashboardController::class, 'index'])
+            ->name('dashboard');
 
         // Students
         Route::get('students', [\App\Http\Controllers\Org\StudentController::class, 'index'])
@@ -66,7 +73,10 @@ Route::prefix('org')
         Route::get('transactions/create',            [\App\Http\Controllers\Org\TransactionController::class, 'create'])->middleware('role:TREASURER,COLLECTOR')->name('transactions.create');
         Route::post('transactions/search',           [\App\Http\Controllers\Org\TransactionController::class, 'search'])->middleware('role:TREASURER,COLLECTOR')->name('transactions.search');
         Route::post('transactions',                  [\App\Http\Controllers\Org\TransactionController::class, 'store'])->middleware('role:TREASURER,COLLECTOR')->name('transactions.store');
-        Route::get('transactions/{transaction}',     [\App\Http\Controllers\Org\TransactionController::class, 'show'])->middleware('role:TREASURER,COLLECTOR,AUDITOR')->name('transactions.show');
+        Route::get('transactions/{transaction}',         [\App\Http\Controllers\Org\TransactionController::class, 'show'])->middleware('role:TREASURER,COLLECTOR,AUDITOR')->name('transactions.show');
+        Route::get('transactions/{transaction}/receipt', [\App\Http\Controllers\Org\TransactionController::class, 'receipt'])->middleware('role:TREASURER,COLLECTOR,AUDITOR')->name('transactions.receipt');
+        // Fine payment transaction (separate from FEE flow to avoid validation mismatch)
+        Route::post('transactions/fine',                 [\App\Http\Controllers\Org\TransactionController::class, 'storeFine'])->middleware('role:TREASURER,COLLECTOR')->name('transactions.fine');
 
         // Void Requests
         Route::get('void-requests',                              [\App\Http\Controllers\Org\VoidRequestController::class, 'index'])->middleware('role:CHAIRPERSON,TREASURER,COLLECTOR,AUDITOR')->name('void-requests.index');
@@ -80,6 +90,56 @@ Route::prefix('org')
         Route::get('remittances/{remittance}',                   [\App\Http\Controllers\Org\RemittanceController::class, 'show'])->middleware('role:TREASURER,AUDITOR')->name('remittances.show');
         Route::patch('remittances/{remittance}/verify',          [\App\Http\Controllers\Org\RemittanceController::class, 'verify'])->middleware('role:AUDITOR')->name('remittances.verify');
         Route::patch('remittances/{remittance}/accept',          [\App\Http\Controllers\Org\RemittanceController::class, 'accept'])->middleware('role:AUDITOR')->name('remittances.accept');
+
+        // ── Events (Module 8 — FR-0026) ───────────────────────────────────────────
+        Route::get('events', [\App\Http\Controllers\Org\EventController::class, 'index'])
+            ->middleware('role:CHAIRPERSON,AUDITOR,SECRETARY')
+            ->name('events.index');
+        Route::get('events/create', [\App\Http\Controllers\Org\EventController::class, 'create'])
+            ->middleware('role:CHAIRPERSON')
+            ->name('events.create');
+        Route::post('events', [\App\Http\Controllers\Org\EventController::class, 'store'])
+            ->middleware('role:CHAIRPERSON')
+            ->name('events.store');
+
+        // Static sub-paths under events/{event}/attendance must come BEFORE wildcard toggle route
+        Route::get('events/{event}/attendance', [\App\Http\Controllers\Org\AttendanceController::class, 'sheet'])
+            ->middleware('role:CHAIRPERSON,AUDITOR,SECRETARY')
+            ->name('attendance.sheet');
+        Route::post('events/{event}/attendance/submit', [\App\Http\Controllers\Org\AttendanceController::class, 'submit'])
+            ->middleware('role:SECRETARY')
+            ->name('attendance.submit');
+        Route::patch('events/{event}/attendance/auditor-approve', [\App\Http\Controllers\Org\AttendanceController::class, 'auditorApprove'])
+            ->middleware('role:AUDITOR')
+            ->name('attendance.auditor-approve');
+        Route::patch('events/{event}/attendance/auditor-forward', [\App\Http\Controllers\Org\AttendanceController::class, 'auditorForward'])
+            ->middleware('role:AUDITOR')
+            ->name('attendance.auditor-forward');
+        Route::patch('events/{event}/attendance/auditor-reject', [\App\Http\Controllers\Org\AttendanceController::class, 'auditorReject'])
+            ->middleware('role:AUDITOR')
+            ->name('attendance.auditor-reject');
+        Route::get('events/{event}/attendance/diff', [\App\Http\Controllers\Org\AttendanceController::class, 'diff'])
+            ->middleware('role:CHAIRPERSON')
+            ->name('attendance.diff');
+        Route::patch('events/{event}/attendance/chairperson-confirm', [\App\Http\Controllers\Org\AttendanceController::class, 'chairpersonConfirm'])
+            ->middleware('role:CHAIRPERSON')
+            ->name('attendance.chairperson-confirm');
+        Route::patch('events/{event}/attendance/chairperson-reject', [\App\Http\Controllers\Org\AttendanceController::class, 'chairpersonReject'])
+            ->middleware('role:CHAIRPERSON')
+            ->name('attendance.chairperson-reject');
+
+        // Slot toggle (uses /toggle/ prefix to avoid clashing with static sub-paths above)
+        Route::patch('events/{event}/attendance/toggle/{student:id}/{slot}', [\App\Http\Controllers\Org\AttendanceController::class, 'toggleSlot'])
+            ->middleware('role:SECRETARY,AUDITOR')
+            ->name('attendance.toggle-slot');
+
+        // Event show + re-sync (after all sub-resource routes to prevent route shadowing)
+        Route::post('events/{event}/resync', [\App\Http\Controllers\Org\EventController::class, 'resync'])
+            ->middleware('role:CHAIRPERSON')
+            ->name('events.resync');
+        Route::get('events/{event}', [\App\Http\Controllers\Org\EventController::class, 'show'])
+            ->middleware('role:CHAIRPERSON,AUDITOR,SECRETARY')
+            ->name('events.show');
 
         // Fee Profiles
         Route::resource('fee-profiles', \App\Http\Controllers\Org\FeeProfileController::class)->except(['show'])->middleware('role:CHAIRPERSON');

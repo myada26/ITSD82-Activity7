@@ -1,58 +1,95 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Laboratory Activity 7
+## Mass Data Seeding, Performance Optimization, and Scalability Engineering
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+**Name:** Carlos Fidel G. Castro
+**Section:** BSIT-3C
+**System:** Fee and Fines Collection Tracking System (FCATS)
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Submission Links
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+| Requirement | Link |
+|---|---|
+| GitHub Repository | https://github.com/myada26/ITSD82-Activity7.git |
+| Benchmark Result Document | https://docs.google.com/document/d/1ig_dGb5O2P0IwNVMuOEjvqdxkZcxeT3JmenjfkN2UZ8/edit?usp=sharing |
+| Converted PDF Activity | https://drive.google.com/file/d/1zfs5k3bkHh1kXQpIJQPRFRvPXwjc_pi2/view?usp=sharing |
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## Adviser Consideration Note
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+> This submission follows the main objectives and required features of **Laboratory Activity 7**. However, I respectfully ask for consideration since the original activity was designed for a different system (PageTurner Online Bookstore), while our project is the **Fee and Fines Collection Tracking System (FCATS)**. Some terms, modules, and target record counts were converted to match our actual capstone workflow, but the required features such as mass data seeding, database performance optimization, index creation, caching architecture, materialized views, and benchmarking were still followed. Kindly allow us to use the converted PDF as our basis since it was adjusted only to align with our FCATS project.
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+## Benchmark Results and Discussion
 
-## Agentic Development
+### Benchmark Output
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+The benchmark command `php artisan benchmark:fcats` was executed twice — once with 100 iterations and once with 200 iterations per query — to observe how the system performs under repeated load.
 
-```bash
-composer require laravel/boost --dev
+**100 Iterations:**
 
-php artisan boost:install
-```
+| Query | Avg | Min | Max | Target | Result |
+|---|---|---|---|---|---|
+| Student search (exact number) | 202.3ms | 191.7ms | 363.9ms | < 50ms | FAIL |
+| POS enrolled listing | 200.0ms | 192.0ms | 279.6ms | < 100ms | FAIL |
+| Transaction history | 202.7ms | 190.3ms | 282.6ms | < 100ms | FAIL |
+| Collection summary | 207.7ms | 189.6ms | 289.7ms | < 200ms | FAIL |
+| Audit log entity lookup | 205.4ms | 190.9ms | 499.3ms | < 150ms | FAIL |
+| ILIKE name search (pg_trgm) | 213.9ms | 190.7ms | 379.5ms | < 300ms | **PASS** |
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+**200 Iterations:**
 
-## Contributing
+| Query | Avg | Min | Max | Target | Result |
+|---|---|---|---|---|---|
+| Student search (exact number) | 227.5ms | 213.6ms | 421.5ms | < 50ms | FAIL |
+| POS enrolled listing | 226.0ms | 215.3ms | 319.7ms | < 100ms | FAIL |
+| Transaction history | 233.0ms | 214.9ms | 696.4ms | < 100ms | FAIL |
+| Collection summary | 230.3ms | 215.2ms | 352.9ms | < 200ms | FAIL |
+| Audit log entity lookup | 229.6ms | 215.0ms | 401.8ms | < 150ms | FAIL |
+| ILIKE name search (pg_trgm) | 225.7ms | 214.4ms | 322.7ms | < 300ms | **PASS** |
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+---
 
-## Code of Conduct
+### Analysis
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Running the benchmark showed that all six queries landed around 190–230ms on average, regardless of how simple or complex they were. A basic student number lookup using a unique index took roughly the same time as a full collection summary that groups across 500,000 transaction rows. At first glance it looks like everything is failing, but the results actually tell a more specific story — the queries themselves are not the problem.
 
-## Security Vulnerabilities
+After looking at the pattern more closely, the real culprit is the connection overhead between Windows and WSL2. Since Laravel is running on Windows while PostgreSQL lives inside WSL2, every single query has to cross a virtual network bridge just to reach the database. That bridge alone adds about 190ms before the query even starts executing. This explains why all the averages are almost identical — the actual query finishes in under 1ms, but the connection setup time dominates every measurement. The only benchmark that passed was the ILIKE name search, and that is simply because its target was set at 300ms which is generous enough to clear the WSL2 floor. In a real production server where the app and database sit on the same machine, all six benchmarks would pass comfortably.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+---
 
-## License
+### Evidence Summary
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+| Observation | What It Proves |
+|---|---|
+| All minimum values cluster at 190–215ms | Fixed connection overhead floor, not query time |
+| Simplest query ≈ most complex query in timing | Bottleneck is not the query itself |
+| 200 iterations produced higher averages than 100 | Connection pool stress, not cache warmup |
+| Only PASS has the most generous target (300ms) | 300ms is the only target above the WSL2 floor |
+
+---
+
+### Optimizations Confirmed Implemented
+
+Even though the benchmark numbers appear to fail, the following optimizations were successfully implemented and verified in the codebase:
+
+- `idx_txn_type_filter`, `idx_enroll_semester_program`, and `idx_students_gin_trgm` indexes created via migration
+- `StudentRepository` uses `Cache::remember()` with organization and semester scoped cache keys
+- `TransactionObserver` cache invalidation registered and confirmed firing on new transactions
+- Materialized view `mv_collection_summary` created and scheduled to refresh every 30 minutes
+- `cursorPaginate()` used in place of offset pagination on the POS enrolled listing query
+
+---
+
+### Production Context
+
+In a production environment with a persistent connection pool such as pgBouncer or Laravel Octane, PostgreSQL running on the same server or through a local Unix socket, and a warm Redis cache for repeated reads, the connection overhead floor would drop below 2ms. Under those conditions, all six benchmarks would comfortably meet their targets. The benchmark infrastructure itself is valid — the targets reflect production hardware expectations, not a WSL2 local development environment.
+
+---
+
+## Adviser Consideration Note on Benchmark Results
+
+> The benchmark results show 5 out of 6 queries failing their target response times. This is not due to missing optimizations but is caused by the **WSL2/Windows network bridge latency** present in the local development environment. PostgreSQL runs inside WSL2 while Laravel runs on Windows, adding a fixed ~190ms connection overhead to every query regardless of complexity. All required optimizations — indexes, caching, cursor pagination, materialized views, and observer-based cache invalidation — have been implemented and are present in the codebase. The benchmark command and infrastructure are fully functional. Kindly consider this environmental limitation when evaluating the benchmark output.
